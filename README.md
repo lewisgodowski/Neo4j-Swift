@@ -30,7 +30,7 @@ You can install Theo in a number of ways
 Add the following line to your Package dependencies array:
 
 ```swift
-.package(url: "https://github.com/Neo4j-Swift/Neo4j-Swift.git”, from: "5.0.0")
+.package(url: "https://github.com/Neo4j-Swift/Neo4j-Swift.git", from: "5.0.0")
 ```
 Run `swift build` to build your project, now with Theo included and ready to be used from your source
 
