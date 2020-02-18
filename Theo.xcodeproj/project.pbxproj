@@ -7812,7 +7812,7 @@
             "OBJ_59"
          );
          name = "Bolt";
-         path = ".build/checkouts/Bolt-swift/Sources";
+         path = "../Bolt-swift/Sources";
          sourceTree = "SOURCE_ROOT";
       };
       "OBJ_450" = {
@@ -7869,7 +7869,7 @@
          isa = "PBXFileReference";
          explicitFileType = "sourcecode.swift";
          name = "Package.swift";
-         path = "/Users/niklas/Programming/Neo4j-Swift/Neo4j-Swift/.build/checkouts/Bolt-swift/Package.swift";
+         path = "/Users/niklas/Programming/Neo4j-Swift/Bolt-swift/Package.swift";
          sourceTree = "<group>";
       };
       "OBJ_460" = {
@@ -10292,21 +10292,21 @@
          isa = "PBXGroup";
          children = (
             "swift-nio::CNIOSHA1::Product",
-            "swift-nio-ssl::CNIOBoringSSL::Product",
-            "swift-nio::NIOConcurrencyHelpers::Product",
-            "swift-nio::NIOTLS::Product",
-            "swift-nio::NIOFoundationCompat::Product",
-            "Theo::TheoTests::Product",
-            "swift-nio-ssl::NIOSSL::Product",
             "Bolt::Bolt::Product",
-            "Theo::Theo::Product",
-            "swift-nio-transport-services::NIOTransportServices::Product",
+            "swift-nio::NIOFoundationCompat::Product",
+            "swift-nio::NIOTLS::Product",
+            "swift-nio-ssl::NIOSSL::Product",
             "swift-nio::CNIOLinux::Product",
+            "swift-nio-ssl::CNIOBoringSSL::Product",
             "swift-nio::CNIODarwin::Product",
+            "swift-nio-transport-services::NIOTransportServices::Product",
+            "swift-nio::NIOConcurrencyHelpers::Product",
+            "Theo::Theo::Product",
             "PackStream::PackStream::Product",
-            "swift-nio::CNIOAtomics::Product",
+            "swift-nio::NIO::Product",
+            "Theo::TheoTests::Product",
             "swift-nio-ssl::CNIOBoringSSLShims::Product",
-            "swift-nio::NIO::Product"
+            "swift-nio::CNIOAtomics::Product"
          );
          name = "Products";
          path = "";

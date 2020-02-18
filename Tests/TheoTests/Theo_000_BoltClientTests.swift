@@ -1,6 +1,7 @@
 import Foundation
 import XCTest
 import PackStream
+import NIO
 
 @testable import Theo
 
@@ -29,8 +30,11 @@ class Theo_000_BoltClientTests: TheoTestCase {
     static let configuration: ClientConfigurationProtocol = ConfigLoader.loadBoltConfig()
     static var runCount: Int = 0
 
+    var eventLoopGroup: MultiThreadedEventLoopGroup! = nil
+
     override func setUp() {
         super.setUp()
+        eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         continueAfterFailure = false
         Theo_000_BoltClientTests.runCount = Theo_000_BoltClientTests.runCount + 1
     }
