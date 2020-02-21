@@ -1,7 +1,7 @@
 import Foundation
 import PackStream
 import Bolt
-
+import NIO
 
 #if os(Linux)
 import Dispatch
@@ -138,14 +138,35 @@ open class BoltClient: ClientProtocol {
             promise.whenFailure { error in
                 completionBlock?(.failure((error)))
             }
+            
 
         } catch let error as Response.ResponseError {
             completionBlock?(.failure(error))
         } catch let error {
             print("Unhandled error while executing cypher: \(error.localizedDescription)")
         }
+        
     }
 
+    /**
+     Executes a given query on Neo4j, and pulls the respons data
+
+     Requires an established connection
+
+     Asynchronous, so the function returns straight away. It is not defined what thread the completionblock will run on,
+     so if you need it to run on main thread or another thread, make sure to dispatch to this that thread
+
+     - warning: This function should only be used with requests that expect data to be pulled after they run. Other requests can make Neo4j disconnect with a failure when it is subsequent asked for the result data
+
+     - parameter query: The query that will be sent to Neo4j
+     - parameter params: The parameters that go with the query
+     - parameter completionBlock: Completion result-block that provides a complete QueryResult, or an Error to explain what went wrong
+     */
+    public func executeCypherWithResult(_ query: String, params: [String:PackProtocol] = [:], completionBlock: ((Result<(Bool, QueryResult), Error>) -> ())? = nil) {
+        let request = Bolt.Request.run(statement: query, parameters: Map(dictionary: params))
+        self.executeWithResult(request: request, completionBlock: completionBlock)
+    }
+    
     /**
      Executes a given request on Neo4j, and pulls the respons data
 

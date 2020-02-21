@@ -105,6 +105,12 @@ public class BoltPoolClient: ClientProtocol {
 }
 
 extension BoltPoolClient {
+    public func all() -> [ClientProtocol] {
+        return clients.map { $0.client }
+    }
+}
+
+extension BoltPoolClient {
     public func connect(completionBlock: ((Result<Bool, Error>) -> ())?) {
         let client = self.getClient()
         defer { release(client) }
@@ -142,6 +148,15 @@ extension BoltPoolClient {
         let client = self.getClient()
         defer { release(client) }
         client.executeCypher(query, params: params, completionBlock: completionBlock)
+    }
+    
+    public func executeCypherWithResult(_ query: String, params: [String:PackProtocol] = [:], completionBlock: ((Result<(Bool, QueryResult), Error>) -> ())? = nil) {
+        let client = self.getClient()
+        
+        client.executeCypherWithResult(query, params: params) { result in
+            self.release(client)
+            completionBlock?(result)
+        }
     }
     
     public func executeCypherSync(_ query: String, params: Dictionary<String, PackProtocol>?) -> (Result<QueryResult, Error>) {
