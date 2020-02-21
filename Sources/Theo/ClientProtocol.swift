@@ -8,6 +8,8 @@ public protocol ClientProtocol: class {
     func disconnect()
     func execute(request: Request, completionBlock: ((Result<(Bool, QueryResult), Error>) -> ())?)
     func executeWithResult(request: Request, completionBlock: ((Result<(Bool, QueryResult), Error>) -> ())?)
+    func executeCypherWithResult(_ query: String, params: [String:PackProtocol], completionBlock: ((Result<(Bool, QueryResult), Error>) -> ())?)
+    
     func executeCypher(_ query: String, params: Dictionary<String,PackProtocol>?, completionBlock: ((Result<(Bool, QueryResult), Error>) -> ())?)
     func executeCypherSync(_ query: String, params: Dictionary<String,PackProtocol>?) -> (Result<QueryResult, Error>)
     
