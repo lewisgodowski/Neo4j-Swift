@@ -1,11 +1,9 @@
-//
-//  SwiftRandom.swift
-//
-//  Created by Furkan Yilmaz on 7/10/15.
-//  Copyright (c) 2015 Furkan Yilmaz. All rights reserved.
-//
-
 import Foundation
+
+#if TARGET_OS_MAC
+#else
+import UIKit
+#endif
 
 // each type has its own random
 

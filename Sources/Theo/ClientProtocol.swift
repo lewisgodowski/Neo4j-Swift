@@ -13,7 +13,7 @@ public protocol ClientProtocol: class {
     func executeCypher(_ query: String, params: Dictionary<String,PackProtocol>?, completionBlock: ((Result<(Bool, QueryResult), Error>) -> ())?)
     func executeCypherSync(_ query: String, params: Dictionary<String,PackProtocol>?) -> (Result<QueryResult, Error>)
     
-    func executeAsTransaction(bookmark: String?, transactionBlock: @escaping (_ tx: Transaction) throws -> ()) throws
+    func executeAsTransaction(mode: Request.TransactionMode, bookmark: String?, transactionBlock: @escaping (_ tx: Transaction) throws -> (), transactionCompleteBlock: ((Bool) -> ())?) throws
     func pullAll(partialQueryResult: QueryResult, completionBlock: ((Result<(Bool, QueryResult), Error>) -> ())?)
     func getBookmark() -> String?
     func createAndReturnNode(node: Node, completionBlock: ((Result<Node, Error>) -> ())?)

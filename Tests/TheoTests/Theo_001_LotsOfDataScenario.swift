@@ -8,17 +8,45 @@ import Bolt
 @testable import Theo
 
 class TheoTestCase: XCTestCase {
-    func makeClient() throws -> ClientProtocol {
+    
+    enum ClientConfigMode {
+        case any
+        case `default`
+        case json
+        case custom
+    }
+    
+    func makeAndConnectClient(mode: ClientConfigMode = .any, completion: @escaping ((Result<Bool, Error>, ClientProtocol) -> ())) throws {
+        let client = try _makeClient(mode: mode)
+        client.connect { result in
+            completion(result, client)
+        }
+    }
+    
+    enum ConnectionErrors: Error {
+        case couldNotConnect
+    }
+    
+    func makeClient(mode: ClientConfigMode = .any) throws -> ClientProtocol {
+        let client = try _makeClient()
+        let result = client.connectSync()
+        if try result.get() == false {
+            throw ConnectionErrors.couldNotConnect
+        }
+        return client
+    }
+    
+    private func _makeClient(mode: ClientConfigMode = .any) throws -> ClientProtocol {
         let client: BoltClient
         let configuration = Theo_000_BoltClientTests.configuration
         
-        if Theo_000_BoltClientTests.runCount % 3 == 0 {
+        if mode == .default || (mode == .any && Theo_000_BoltClientTests.runCount % 3 == 0) {
             client = try BoltClient(hostname: configuration.hostname,
                                     port: configuration.port,
                                     username: configuration.username,
                                     password: configuration.password,
                                     encrypted: configuration.encrypted)
-        } else if Theo_000_BoltClientTests.runCount % 3 == 1 {
+        } else if mode == .custom || (mode == .any && Theo_000_BoltClientTests.runCount % 3 == 1) {
             class CustomConfig: ClientConfigurationProtocol {
                 let hostname: String
                 let username: String
@@ -35,7 +63,7 @@ class TheoTestCase: XCTestCase {
                 }
             }
             client = try BoltClient(CustomConfig(configuration: configuration))
-        } else {
+        } else { // .json || .any && %3 == 2
             let testPath = URL(fileURLWithPath: #file)
                 .deletingLastPathComponent().path
             let filePath = "\(testPath)/TheoBoltConfig.json"
@@ -44,21 +72,6 @@ class TheoTestCase: XCTestCase {
             let json = try JSONSerialization.jsonObject(with: data) as! [String:Any]
             let jsonConfig = JSONClientConfiguration(json: json)
             client = try BoltClient(jsonConfig)
-        }
-        
-        
-        if Theo_000_BoltClientTests.runCount % 2 == 0 {
-            let group = DispatchGroup()
-            group.enter()
-            performConnect(client: client) { connectionSuccessful in
-                XCTAssertTrue(connectionSuccessful)
-                group.leave()
-            }
-            group.wait()
-        } else {
-            performConnectSync(client: client) { connectionSuccessful in
-                XCTAssertTrue(connectionSuccessful)
-            }
         }
         
         return client

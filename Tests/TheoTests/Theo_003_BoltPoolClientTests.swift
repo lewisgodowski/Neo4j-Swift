@@ -23,7 +23,7 @@ class Theo_003_BoltPoolClientTests: Theo_000_BoltClientTests {
         Theo_003_BoltPoolClientTests.pool.release(clientForSuperclass)
     }
     
-    override func makeClient() throws -> ClientProtocol {
+    override func makeClient(mode: ClientConfigMode = .any) throws -> ClientProtocol {
         return clientForSuperclass
     }
 }
