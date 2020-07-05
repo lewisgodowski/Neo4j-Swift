@@ -89,7 +89,7 @@ public class Node: ResponseItem {
     public func createRequestQuery(withReturnStatement: Bool = true, nodeAlias: String = "node", paramSuffix: String = "", withCreate: Bool = true) -> (String, [String: PackProtocol]) {
         let nodeAlias = nodeAlias == "" ? nodeAlias : "`\(nodeAlias)`"
         let labels = self.labels.map { "`\($0)`" }.joined(separator: ":")
-        let params = self.properties.keys.map { "`\($0)`: {\($0)\(paramSuffix)}" }.joined(separator: ", ")
+        let params = self.properties.keys.map { "`\($0)`: $\($0)\(paramSuffix)" }.joined(separator: ", ")
 
         let query: String
         if withReturnStatement {
@@ -125,7 +125,7 @@ public class Node: ResponseItem {
 
         let addedLabels = self.addedLabels.count == 0 ? "" : "\(nodeAlias):" + self.addedLabels.map { "`\($0)`" }.joined(separator: ":")
 
-        let updatedProperties = self.updatedProperties.keys.map { "\(nodeAlias).`\($0)` = {\($0)\(paramSuffix)}" }.joined(separator: ", ")
+        let updatedProperties = self.updatedProperties.keys.map { "\(nodeAlias).`\($0)` = $\($0)\(paramSuffix)" }.joined(separator: ", ")
         properties.merge( self.updatedProperties.map { key, value in
             return ("\(key)\(paramSuffix)", value)}, uniquingKeysWith: { _, new in return new } )
 
@@ -229,7 +229,7 @@ public class Node: ResponseItem {
             labelQuery = ":" + labelQuery
         }
 
-        var propertiesQuery = properties.keys.map { "\(nodeAlias).`\($0)`= {\($0)}" }.joined(separator: "\nAND ")
+        var propertiesQuery = properties.keys.map { "\(nodeAlias).`\($0)`= $\($0)" }.joined(separator: "\nAND ")
         if propertiesQuery != "" {
             propertiesQuery = "WHERE " + propertiesQuery
         }
@@ -301,7 +301,7 @@ extension Array where Element: Node {
             idMaps.append("id(\(nodeAlias)) = \(nodeId)")
 
             for (key, value) in node.updatedProperties {
-                updatedProperties.append("\(nodeAlias).`\(key)` = { \(key)\(i) }")
+                updatedProperties.append("\(nodeAlias).`\(key)` = $\(key)\(i)")
                 properties["\(key)\(i)"] = value
             }
 

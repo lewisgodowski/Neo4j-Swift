@@ -125,41 +125,90 @@ class Theo_000_BoltClientTests: TheoTestCase {
         return client
     }*/
     
+    func testMeasureUnwinds() {
+        measure {
+            try? testUnwinds()
+        }
+    }
+    
     func testUnwinds() throws {
-
-        let client = try makeClient()
         
-        for i in 1000...2250 {
-            let cypher: String = "UNWIND range(1, \(i)) AS n RETURN n"
-            let result = client.executeCypherSync(cypher, params: [:])
+        let exp = expectation(description: "testUnwinds")
+        
+        try makeAndConnectClient() { (result, client) in
             XCTAssert(result.isSuccess)
-            guard case let Result.success(value) = result else {
-                XCTFail()
-                return
+            
+            let n = 10
+            let max = 2250
+            for i in (max-n)...max {
+                let cypher: String = "UNWIND range(1, \(i)) AS n RETURN n"
+                let group = DispatchGroup()
+                group.enter()
+                DispatchQueue.global(qos: .background).async {
+                    client.executeCypherWithResult(cypher, params: [:]) { result in
+                        
+                        XCTAssert(result.isSuccess)
+                        guard case let Result.success((success, value)) = result else {
+                            XCTFail()
+                            group.leave()
+                            return
+                        }
+                        XCTAssertTrue(success)
+                        XCTAssertEqual(i, value.rows.count)
+                        
+                        if i == max {
+                            exp.fulfill()
+                        }
+                        
+                        group.leave()
+                    }
+                }
+                group.wait()
             }
-            XCTAssertEqual(i, value.rows.count)
+        }
+        
+        
+        waitForExpectations(timeout: 1000.0) { _ in
+            print("Test complete")
         }
     }
     
     func testUnwind() throws {
-        let client = try makeClient()
-        let i = 100000
-        let result = client.executeCypherSync("UNWIND range(1, \(i)) AS n RETURN n", params: [:])
-        XCTAssert(result.isSuccess)
-        guard case let Result.success(value) = result else {
-            XCTFail()
-            return
+        let exp = expectation(description: "testUnwind")
+        
+        try makeAndConnectClient() { (connectionResult, client) in
+            XCTAssert(connectionResult.isSuccess)
+            let i = 1000
+            client.executeCypher("UNWIND range(1, \(i)) AS n RETURN n", params: [:]) { result in
+                XCTAssert(result.isSuccess)
+                guard case let Result.success((success, value)) = result
+                else {
+                    XCTFail()
+                    return
+                }
+
+                XCTAssert(success)
+                XCTAssertEqual(1, value.fields.count)
+                XCTAssertEqual(i, value.rows.count)
+                exp.fulfill()
+            }
         }
-        XCTAssertEqual(i, value.rows.count)
+        
+        
+        waitForExpectations(timeout: 10.0) { _ in
+            print("Test complete")
+        }
+        
     }
 
     func testNodeResult() throws {
-        let client = try makeClient()
         let exp = self.expectation(description: "testNodeResult")
-
-        XCTAssertTrue(client.executeCypherSync("CREATE (n:TheoTestNodeWithALongLabel { foo: \"bar\", baz: 3}) RETURN n", params: [:]).isSuccess)
-        exp.fulfill()
-
+        try makeAndConnectClient() { (result, client) in
+            
+            XCTAssertTrue(client.executeCypherSync("CREATE (n:TheoTestNodeWithALongLabel { foo: \"bar\", baz: 3}) RETURN n", params: [:]).isSuccess)
+            exp.fulfill()
+        }
+        
         self.waitForExpectations(timeout: 10, handler: { error in
             XCTAssertNil(error)
         })
@@ -284,12 +333,12 @@ class Theo_000_BoltClientTests: TheoTestCase {
         let exp = self.expectation(description: "testSucceedingTransaction")
 
         do {
-            try client.executeAsTransaction(bookmark: nil) { (tx) in
+            try client.executeAsTransaction(mode: .readwrite, bookmark: nil, transactionBlock: { (tx) in
                 XCTAssertTrue(client.executeCypherSync("CREATE (n:TheoTestNode { foo: \"bar\"})", params: [:]).isSuccess)
                 XCTAssertTrue(client.executeCypherSync("MATCH (n:TheoTestNode { foo: \"bar\"}) RETURN n", params: [:]).isSuccess)
                 XCTAssertTrue(client.executeCypherSync("MATCH (n:TheoTestNode { foo: \"bar\"}) DETACH DELETE n", params: [:]).isSuccess)
                 exp.fulfill()
-            }
+            }, transactionCompleteBlock: nil)
         } catch let error {
             print("Failed transaction with error \(error)")
             XCTFail()
@@ -300,21 +349,52 @@ class Theo_000_BoltClientTests: TheoTestCase {
         })
     }
 
+    func testMeasureFailingTransactionSync() throws {
+        let client = try makeClient()
+        
+        measure {
+            do {
+                let exp = self.expectation(description: "testFailingTransaction")
+                
+                try client.executeAsTransaction(mode: .readwrite, bookmark: nil, transactionBlock: { (tx) in
+                    XCTAssertTrue(client.executeCypherSync("CREATE (n:TheoTestNode { foo: \"bar\"})", params: [:]).isSuccess)
+                    XCTAssertTrue(client.executeCypherSync("MATCH (n:TheoTestNode { foo: \"bar\"}) RETURN n", params: [:]).isSuccess)
+                    XCTAssertFalse(client.executeCypherSync("MAXXXTCH (n:TheoTestNode { foo: \"bar\"}) DETACH DELETE n", params: [:]).isSuccess)
+                    // client.pullSynchronouslyAndIgnore()
+                    tx.markAsFailed()
+                    
+                    XCTAssertFalse(tx.succeed)
+                    
+                    client.connect { _ in // TODO: Ask Nigel what to do instead of reconnect. RESET?
+                        exp.fulfill()
+                    }
+                }, transactionCompleteBlock: nil)
+                
+                self.waitForExpectations(timeout: 1000 /* TheoTimeoutInterval*/, handler: { error in
+                    XCTAssertNil(error)
+                })
+                
+            } catch {
+                XCTFail()
+            }
+        }
+    }
+    
     func testFailingTransactionSync() throws {
         let client = try makeClient()
         let exp = self.expectation(description: "testFailingTransaction")
 
-        try client.executeAsTransaction(bookmark: nil) { (tx) in
+        try client.executeAsTransaction(mode: .readwrite, bookmark: nil, transactionBlock: { (tx) in
             XCTAssertTrue(client.executeCypherSync("CREATE (n:TheoTestNode { foo: \"bar\"})", params: [:]).isSuccess)
             XCTAssertTrue(client.executeCypherSync("MATCH (n:TheoTestNode { foo: \"bar\"}) RETURN n", params: [:]).isSuccess)
             XCTAssertFalse(client.executeCypherSync("MAXXXTCH (n:TheoTestNode { foo: \"bar\"}) DETACH DELETE n", params: [:]).isSuccess)
-            client.pullSynchronouslyAndIgnore()
+            // client.pullSynchronouslyAndIgnore()
             tx.markAsFailed()
 
             XCTAssertFalse(tx.succeed)
             
             exp.fulfill()
-        }
+        }, transactionCompleteBlock: nil)
 
         self.waitForExpectations(timeout: TheoTimeoutInterval, handler: { error in
             XCTAssertNil(error)
@@ -327,10 +407,10 @@ class Theo_000_BoltClientTests: TheoTestCase {
         let client = try self.makeClient()
         let exp = self.expectation(description: "testCancellingTransaction")
         
-        try client.executeAsTransaction(bookmark: nil) { (tx) in
+        try client.executeAsTransaction(mode: .readwrite, bookmark: nil, transactionBlock: { (tx) in
             tx.markAsFailed()
             exp.fulfill()
-        }
+        }, transactionCompleteBlock: nil)
         
         self.waitForExpectations(timeout: TheoTimeoutInterval, handler: { error in
             XCTAssertNil(error)
@@ -340,63 +420,84 @@ class Theo_000_BoltClientTests: TheoTestCase {
     func testTransactionResultsInBookmark() throws {
         let client = try makeClient()
         let exp = self.expectation(description: "testTransactionResultsInBookmark")
-
-        try client.executeAsTransaction(bookmark: nil) { (tx) in
-            client.executeCypher("CREATE (n:TheoTestNode { foo: \"bar\"})", params: [:]) { result in
-                switch result {
-                case let .failure(error):
-                    print("Error in cypher: \(error)")
-                case let .success((success, partialQueryResult)):
-                    if success {
-                        client.pullAll(partialQueryResult: partialQueryResult) { result in
-                            switch result {
-                            case let .failure(error):
-                                print("Error in cypher: \(error)")
-                            case let .success((success, queryResult)):
-                                XCTAssertTrue(success)
-                                XCTAssertEqual(1, queryResult.stats.propertiesSetCount)
-                                XCTAssertEqual(1, queryResult.stats.labelsAddedCount)
-                                XCTAssertEqual(1, queryResult.stats.nodesCreatedCount)
-                                XCTAssertEqual("w", queryResult.stats.type)
-                                XCTAssertEqual(0, queryResult.fields.count)
-                                XCTAssertEqual(0, queryResult.nodes.count)
-                                XCTAssertEqual(0, queryResult.relationships.count)
-                                XCTAssertEqual(0, queryResult.paths.count)
-                                XCTAssertEqual(0, queryResult.rows.count)
-                            }
-                        }
-                    } else {
-                        XCTFail("Query failed somehow")
+        
+        let group = DispatchGroup()
+        group.enter()
+        
+        DispatchQueue.global(qos: .background).async {
+            do {
+                
+                try client.executeAsTransaction(mode: .readwrite, bookmark: nil, transactionBlock: { (tx) in
+                    let result = client.executeCypherSync("CREATE (n:TheoTestNode { foo: \"bar\"})", params: [:])
+                    //                    client.executeCypher("CREATE (n:TheoTestNode { foo: \"bar\"})", params: [:]) { result in
+                    
+                    // client.pullSynchronouslyAndIgnore()
+                    
+                    switch result {
+                    case let .failure(error):
+                        print("Error in cypher: \(error)")
+                    // case let .success((success, partialQueryResult)):
+                    case let .success(queryResult):
+                        //client.pullAll(partialQueryResult: partialQueryResult) { result in
+                        XCTAssertEqual(1, queryResult.stats.propertiesSetCount)
+                        XCTAssertEqual(1, queryResult.stats.labelsAddedCount)
+                        XCTAssertEqual(1, queryResult.stats.nodesCreatedCount)
+                        XCTAssertEqual("w", queryResult.stats.type)
+                        XCTAssertEqual(0, queryResult.fields.count)
+                        XCTAssertEqual(0, queryResult.nodes.count)
+                        XCTAssertEqual(0, queryResult.relationships.count)
+                        XCTAssertEqual(0, queryResult.paths.count)
+                        XCTAssertEqual(0, queryResult.rows.count)
+                        
                     }
-
-                }
-
-                XCTAssertTrue(result.isSuccess)
+                    
+                    XCTAssertTrue(result.isSuccess)
+                    //}
+                }, transactionCompleteBlock: { isSuccess in
+                    XCTAssertTrue(isSuccess)
+                    exp.fulfill()
+                    group.leave()
+                })
+            } catch {
+                XCTFail()
             }
-
-            exp.fulfill()
         }
-
+        
+        group.wait()
+        
         if let bookmark = client.getBookmark() {
             XCTAssertNotEqual("", bookmark)
-
-            #if swift(>=4.0)
-                let endIndex = bookmark.index(bookmark.startIndex, offsetBy: 17)
-                let substring = bookmark[..<endIndex]
-                XCTAssertEqual("neo4j:bookmark:v1", String(substring))
-            #elseif swift(>=3.0)
-                XCTAssertEqual("neo4j:bookmark:v1", bookmark.substring(to: bookmark.index(bookmark.startIndex, offsetBy: 17)))
-            #endif
-
+            
+            let endIndex = bookmark.index(bookmark.startIndex, offsetBy: 17)
+            let substring = bookmark[..<endIndex]
+            XCTAssertEqual("neo4j:bookmark:v1", String(substring))
+            
         } else {
             XCTFail("Bookmark should not be nil")
+        }
+        
+        self.waitForExpectations(timeout: 10, handler: { error in
+            XCTAssertNil(error)
+        })
+    }
+    
+    func testDeprecatedParameterSyntax() throws {
+
+        let client = try makeClient()
+        let exp = self.expectation(description: "testDeprecatedParameterSyntax")
+
+        try? client.executeCypher("MATCH (a:Person) WHERE a.name = {name} RETURN count(a) AS count", params: ["name": "Arthur"])  { result in
+            
+            XCTAssertFalse(result.isSuccess)
+            exp.fulfill()
         }
 
         self.waitForExpectations(timeout: 10, handler: { error in
             XCTAssertNil(error)
         })
-    }
 
+    }
+    
     func testGettingStartedExample() throws {
         
         let client = try makeClient()
@@ -408,36 +509,41 @@ class Theo_000_BoltClientTests: TheoTestCase {
         figureOutNumberOfKingArthurs.enter()
         var numberOfKingArthurs = -1
 
-        client.executeCypher("MATCH (a:Person) WHERE a.name = {name} RETURN count(a) AS count", params: ["name": "Arthur"])  { result in
-
-            XCTAssertTrue(result.isSuccess)
-            guard case let Result.success(value) = result else {
-                XCTFail()
-                return
-            }
-            
-            XCTAssertTrue(value.0)
-
-            client.pullAll(partialQueryResult: value.1) { response in
+        DispatchQueue.global(qos: .background).async {
+            client.executeCypher("MATCH (a:Person) WHERE a.name = $name RETURN count(a) AS count", params: ["name": "Arthur"])  { result in
+                
+                XCTAssertTrue(result.isSuccess)
+                guard case let Result.success(value) = result else {
+                    XCTFail()
+                    figureOutNumberOfKingArthurs.leave()
+                    return
+                }
+                
+                XCTAssertTrue(value.0)
+                
                 switch result {
                 case .failure:
                     XCTFail("Failed to pull response data")
                 case let .success((success, queryResult)):
                     XCTAssertTrue(success)
                     XCTAssertEqual(1, queryResult.rows.count)
-                    XCTAssertEqual(1, queryResult.rows.first!.count)
+                    XCTAssertEqual(1, queryResult.rows.first?.count ?? 0)
                     XCTAssertEqual(0, queryResult.nodes.count)
                     XCTAssertEqual(0, queryResult.relationships.count)
                     XCTAssertEqual(0, queryResult.paths.count)
                     XCTAssertEqual(1, queryResult.fields.count)
-
-                    numberOfKingArthurs = Int(queryResult.rows.first?["count"] as! UInt64)
+                    
+                    if let numberOfKingArthursRI = queryResult.rows.first?["count"],
+                        let numberOfKingArthurS64 = numberOfKingArthursRI as? UInt64 {
+                        numberOfKingArthurs = Int(truncatingIfNeeded: numberOfKingArthurS64)
+                    } else {
+                        XCTFail("Could not get count and make it an Int")
+                    }
+                    
                     XCTAssertGreaterThanOrEqual(0, numberOfKingArthurs)
-
+                    
+                    figureOutNumberOfKingArthurs.leave()
                 }
-
-
-                figureOutNumberOfKingArthurs.leave()
             }
         }
         figureOutNumberOfKingArthurs.wait()
@@ -445,8 +551,10 @@ class Theo_000_BoltClientTests: TheoTestCase {
 
         // Now lets run the actual test
 
-        try client.executeAsTransaction(bookmark: nil) { (tx) in
-            let result = client.executeCypherSync("CREATE (a:Person {name: {name}, title: {title}})",
+        try client.executeAsTransaction(mode: .readwrite, bookmark: nil, transactionBlock: { (tx) in
+            tx.autocommit = false
+            
+            let result = client.executeCypherSync("CREATE (a:Person {name: $name, title: $title})",
                                                    params: ["name": "Arthur", "title": "King"])
             XCTAssertTrue(result.isSuccess)
             guard case let Result.success(value) = result else {
@@ -465,8 +573,9 @@ class Theo_000_BoltClientTests: TheoTestCase {
             XCTAssertEqual(0, queryResult.rows.count)
 
 
-            client.executeCypher("MATCH (a:Person) WHERE a.name = {name} " +
-            "RETURN a.name AS name, a.title AS title", params: ["name": "Arthur"])  { result in
+            client.executeCypher("MATCH (a:Person) WHERE a.name = $name " +
+                                 "RETURN a.name AS name, a.title AS title",
+                         params: ["name": "Arthur"])  { result in
 
                 XCTAssertTrue(result.isSuccess)
                 guard case let Result.success(value) = result else {
@@ -480,36 +589,23 @@ class Theo_000_BoltClientTests: TheoTestCase {
                 XCTAssertEqual(0, queryResult.nodes.count)
                 XCTAssertEqual(0, queryResult.relationships.count)
                 XCTAssertEqual(0, queryResult.paths.count)
-                XCTAssertEqual(0, queryResult.rows.count)
+                XCTAssertEqual(1, queryResult.rows.count)
+                XCTAssertEqual("r", queryResult.stats.type)
 
-                client.pullAll(partialQueryResult: queryResult) { result in
+                let row = queryResult.rows.first!
+                XCTAssertEqual(2, row.count)
+                XCTAssertEqual("King", row["title"] as! String)
+                XCTAssertEqual("Arthur", row["name"] as! String)
 
-                    switch result {
-                    case .failure(_):
-                        XCTFail("Failed to pull response data")
-                    case let.success((success, queryResult)):
-                        XCTAssertTrue(success)
+                XCTAssertEqual(numberOfKingArthurs + 2, queryResult.rows.first?.count ?? 0)
 
-                        XCTAssertEqual("r", queryResult.stats.type)
-                        XCTAssertEqual(2, queryResult.fields.count)
-                        XCTAssertEqual(0, queryResult.nodes.count)
-                        XCTAssertEqual(0, queryResult.relationships.count)
-                        XCTAssertEqual(0, queryResult.paths.count)
-                        XCTAssertEqual(1, queryResult.rows.count)
-                        let row = queryResult.rows.first!
-                        XCTAssertEqual(2, row.count)
-                        XCTAssertEqual("King", row["title"] as! String)
-                        XCTAssertEqual("Arthur", row["name"] as! String)
-
-
-                        XCTAssertEqual(numberOfKingArthurs + 2, queryResult.rows.first?.count ?? 0)
-
-                        tx.markAsFailed() // This should undo the beginning CREATE even though we have pulled it here
-                        exp.fulfill()
-                    }
-                }
+                tx.markAsFailed() // This should undo the beginning CREATE even though we have pulled it here
+                try? tx.commitBlock(false)
             }
-        }
+        }, transactionCompleteBlock: { isSuccess in
+            XCTAssertFalse(isSuccess, "Transaction was rolled back")
+            exp.fulfill()
+        })
 
         self.waitForExpectations(timeout: 10, handler: { error in
             XCTAssertNil(error)
@@ -628,6 +724,51 @@ class Theo_000_BoltClientTests: TheoTestCase {
             XCTAssertEqual("Christina", resultNode4.properties["firstName"] as! String)
             XCTAssertEqual(37 as Int64, resultNode4.properties["age"]?.intValue())
 
+        }
+    }
+    
+    func testMeasureUpdateAsyncAndRunCypherFromNodesWithoutResult() {
+        measure {
+            try? testUpdateAsyncAndRunCypherFromNodesWithoutResult()
+        }
+    }
+    
+    func testUpdateAsyncAndRunCypherFromNodesWithoutResult() throws {
+
+        let exp = expectation(description: "testUpdateAsyncAndRunCypherFromNodesWithoutResult")
+        let nodes = makeSomeNodes()
+
+        let client = try makeClient()
+        client.createAndReturnNodes(nodes: nodes) { (nodesCreatedResult) in
+            switch nodesCreatedResult {
+            case let .failure(error):
+                XCTFail(error.localizedDescription)
+            case let .success(resultNodes):
+                let resultNode = resultNodes.filter { $0.properties["firstName"] as! String == "Niklas" }.first!
+                let resultNode2 = resultNodes.filter { $0.properties["firstName"] as! String == "Christina" }.first!
+
+                resultNode["instrument"] = "Recorder"
+                resultNode["favouriteComposer"] = "CPE Bach"
+                resultNode["weight"] = nil
+                resultNode.add(label: "LabelledOne")
+
+                resultNode2["instrument"] = "Piano"
+                resultNode2.add(label: "LabelledOne")
+                client.updateAndReturnNodes(nodes: [resultNode, resultNode2]) { updateNodesResult in
+                    guard case let Result.success(nodes) = updateNodesResult else {
+                        XCTFail()
+                        return
+                    }
+
+                    XCTAssertEqual(2, nodes.count)
+
+                    exp.fulfill()
+                }
+            }
+        }
+        
+        waitForExpectations(timeout: 10.0) { error in
+            print("failed...")
         }
     }
 
@@ -1304,7 +1445,7 @@ class Theo_000_BoltClientTests: TheoTestCase {
 
         let exp = expectation(description: "Finish transaction with updates to relationship")
         let client = try makeClient()
-        try client.executeAsTransaction(bookmark: nil) { tx in
+        try client.executeAsTransaction(mode: .readwrite, bookmark: nil, transactionBlock:  { tx in
 
             let nodes = self.makeSomeNodes()
             guard case let Result.success(createdNodes) = client.createAndReturnNodesSync(nodes: nodes) else {
@@ -1344,8 +1485,9 @@ class Theo_000_BoltClientTests: TheoTestCase {
             XCTAssertEqual(to.id!, finalRelationship.toNodeId)
 
             tx.markAsFailed()
+        }, transactionCompleteBlock: { isSuccess in
             exp.fulfill()
-        }
+        })
 
         waitForExpectations(timeout: 10.0) { error in
             XCTAssertNil(error)
@@ -1534,14 +1676,14 @@ CREATE (bb)-[:HAS_ALCOHOLPERCENTAGE]->(ap),
             XCTAssertTrue(result.isSuccess)
         }
         
-        try client.executeAsTransaction(bookmark: nil) { tx in
+        try client.executeAsTransaction(mode: .readwrite, bookmark: nil, transactionBlock: { tx in
             for query in queries.split(separator: ";") {
                 let result = client.executeCypherSync(String(query), params: [:])
                 XCTAssertTrue(result.isSuccess)
             }
             
             tx.markAsFailed()
-        }
+        }, transactionCompleteBlock: nil)
     }
     
     /*func testDisconnect() throws {

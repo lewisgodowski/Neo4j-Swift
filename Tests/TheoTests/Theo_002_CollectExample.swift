@@ -33,7 +33,7 @@ class Theo_002_CollectExample: TheoTestCase {
                     RETURN p, COLLECT(e.name)
                     """
         
-        try client.executeAsTransaction(bookmark: nil) { tx in
+        try client.executeAsTransaction(mode: .readwrite, bookmark: nil, transactionBlock: { tx in
             let createResult = client.executeCypherSync(createQueries, params: [:])
             XCTAssertTrue(createResult.isSuccess)
             
@@ -43,13 +43,13 @@ class Theo_002_CollectExample: TheoTestCase {
             print(queryResult)
             
             tx.markAsFailed()
-        }
+        }, transactionCompleteBlock: nil)
     }
     
     func testLukesSample() throws {
         
         let client = try makeClient()
-        try client.executeAsTransaction(bookmark: nil) { tx in
+        try client.executeAsTransaction(mode: .readwrite, bookmark: nil, transactionBlock: { tx in
 
             let createQuery = (0..<500).map { i in
                 return "CREATE (t\(i):TestNode{value: \(Int.random(0, 150))})"
@@ -72,7 +72,7 @@ class Theo_002_CollectExample: TheoTestCase {
             print(values)
 
             tx.markAsFailed()
-        }
+        }, transactionCompleteBlock: nil)
     }
 
 }

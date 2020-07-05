@@ -103,7 +103,7 @@ public class Relationship: ResponseItem {
 
         var properties = self.properties
 
-        var params = properties.keys.map { "`\($0)`: {\($0)}" }.joined(separator: ", ")
+        var params = properties.keys.map { "`\($0)`: $\($0)" }.joined(separator: ", ")
         if params != "" {
             params = " { \(params) }"
         }
@@ -171,7 +171,7 @@ public class Relationship: ResponseItem {
         var properties = [String:PackProtocol]()
         let relationshipAlias = relationshipAlias == "" ? relationshipAlias : "`\(relationshipAlias)`"
 
-        var updatedProperties = self.updatedProperties.keys.map { "\(relationshipAlias).`\($0)` = {\($0)\(paramSuffix)}" }.joined(separator: ", ")
+        var updatedProperties = self.updatedProperties.keys.map { "\(relationshipAlias).`\($0)` = $\($0)\(paramSuffix)" }.joined(separator: ", ")
         properties.merge( self.updatedProperties.map { key, value in
             return ("\(key)\(paramSuffix)", value)}, uniquingKeysWith: { _, new in return new } )
 
@@ -322,7 +322,7 @@ extension Array where Element: Relationship {
 
             var params = relationship.properties.keys.map {
                 parameters["\($0)\(i)"] = relationship.properties[$0]
-                return "`\($0)`: {\($0)\(i)}"
+                return "`\($0)`: $\($0)\(i)"
             }.joined(separator: ", ")
             if params != "" {
                 params = " { \(params) }"
