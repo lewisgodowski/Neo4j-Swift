@@ -1441,6 +1441,61 @@ class Theo_000_BoltClientTests: TheoTestCase {
         XCTAssertEqual("rw", queryResult!.stats.type)
     }
 
+    func testUpdateRelationshipAlt() throws {
+        
+        let exp = expectation(description: "Finish transaction with updates to relationship")
+        let client = try makeClient()
+        try client.executeAsTransaction(mode: .readwrite, bookmark: nil, transactionBlock:  { tx in
+            
+            tx.autocommit = false
+            let nodes = self.makeSomeNodes()
+            client.createAndReturnNodes(nodes: nodes) { result in
+                XCTAssertTrue(result.isSuccess)
+                let createdNodes = try! result.get()
+                
+                let (from, to) = (createdNodes[0], createdNodes[1])
+                client.relate(node: from, to: to, type: "Married", properties: [ "happily": true ]) { result in
+                    XCTAssertTrue(result.isSuccess)
+                    let createdRelationship = try! result.get()
+                    
+                    XCTAssertTrue(createdRelationship["happily"] as! Bool)
+                    XCTAssertEqual(from.id!, createdRelationship.fromNodeId)
+                    XCTAssertEqual(to.id!, createdRelationship.toNodeId)
+                    
+                    createdRelationship["location"] = "church"
+                    createdRelationship["someProp"] = 42
+                    
+                    
+                    
+                    client.updateAndReturnRelationship(relationship: createdRelationship) { result in
+                        XCTAssertTrue(result.isSuccess)
+                        var updatedRelationship = try! result.get()
+                        updatedRelationship["someProp"] = nil
+                        
+                        client.updateAndReturnRelationship(relationship: updatedRelationship) { result in
+                            XCTAssertTrue(result.isSuccess)
+                            let finalRelationship = try! result.get()
+                            
+                            XCTAssertTrue(finalRelationship["happily"] as! Bool)
+                            XCTAssertEqual("church", finalRelationship["location"] as! String)
+                            XCTAssertNil(finalRelationship["someProp"])
+                            XCTAssertEqual(from.id!, finalRelationship.fromNodeId)
+                            XCTAssertEqual(to.id!, finalRelationship.toNodeId)
+                            
+                            tx.markAsFailed()
+                            exp.fulfill()
+                        }
+                    }
+                }
+            }
+            
+        }, transactionCompleteBlock: nil)
+        
+        waitForExpectations(timeout: 20.0) { error in
+            XCTAssertNil(error)
+        }
+    }
+    
     func testUpdateRelationship() throws {
 
         let exp = expectation(description: "Finish transaction with updates to relationship")
@@ -1489,7 +1544,7 @@ class Theo_000_BoltClientTests: TheoTestCase {
             exp.fulfill()
         })
 
-        waitForExpectations(timeout: 10.0) { error in
+        waitForExpectations(timeout: 20.0) { error in
             XCTAssertNil(error)
         }
     }
@@ -2442,7 +2497,13 @@ CREATE (bb)-[:HAS_ALCOHOLPERCENTAGE]->(ap),
             try! testUpdateRelationship()
         }
     }
-    
+
+    func testMeasureTestUpdateRelationshipAlt() {
+        measure {
+            try! testUpdateRelationshipAlt()
+        }
+    }
+
     func testMeasureTestCreateAndDeleteNode() {
         measure {
             try! testCreateAndDeleteNode()
