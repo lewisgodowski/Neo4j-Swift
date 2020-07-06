@@ -247,7 +247,7 @@ public class Relationship: ResponseItem {
     public static func queryFor(type: String, andProperties properties: [String:PackProtocol], relationshipAlias: String = "rel", skip: UInt64 = 0, limit: UInt64 = 25) -> Request {
         let relationshipAlias = relationshipAlias == "" ? relationshipAlias : "`\(relationshipAlias)`"
 
-        var propertiesQuery = properties.keys.map { "\(relationshipAlias).`\($0)`= {\($0)}" }.joined(separator: "\nAND ")
+        var propertiesQuery = properties.keys.map { "\(relationshipAlias).`\($0)`= $\($0)" }.joined(separator: "\nAND ")
         if propertiesQuery != "" {
             propertiesQuery = "WHERE " + propertiesQuery
         }

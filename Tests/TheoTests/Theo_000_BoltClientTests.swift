@@ -1711,6 +1711,8 @@ CREATE (bb)-[:HAS_ALCOHOLPERCENTAGE]->(ap),
     
     func testFindNodeById() throws {
         
+        let exp = expectation(description: "testFindNodeById")
+        
         let nodes = makeSomeNodes()
         
         let client = try makeClient()
@@ -1728,8 +1730,13 @@ CREATE (bb)-[:HAS_ALCOHOLPERCENTAGE]->(ap),
                 XCTFail(error.localizedDescription)
             case let .success(foundNode):
                 XCTAssertNotNil(foundNode)
-                XCTAssertEqual(createdNode, foundNode!)
+                XCTAssertEqual(createdNode.id, foundNode!.id)
             }
+            exp.fulfill()
+        }
+        
+        waitForExpectations(timeout: 10.0) { error in
+            XCTAssertNil(error)
         }
     }
     
@@ -2180,7 +2187,7 @@ CREATE (bb)-[:HAS_ALCOHOLPERCENTAGE]->(ap),
     }
     
     func createBigNodes(num: Int) throws {
-        let query = "UNWIND RANGE(1, 16, 1) AS i CREATE (n:BigNode { i: i, payload: {payload} })"
+        let query = "UNWIND RANGE(1, 16, 1) AS i CREATE (n:BigNode { i: i, payload: $payload })"
         let payload = (0..<1024).map { _ in "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz" } .joined(separator: "/0123456789/")
         
         let client = try makeClient()
