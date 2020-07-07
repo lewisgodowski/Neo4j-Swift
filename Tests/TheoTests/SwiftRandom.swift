@@ -1,9 +1,5 @@
 import Foundation
 
-#if TARGET_OS_MAC
-#else
-import UIKit
-#endif
 
 // each type has its own random
 

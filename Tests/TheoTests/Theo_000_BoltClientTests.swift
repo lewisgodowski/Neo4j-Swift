@@ -1443,6 +1443,8 @@ class Theo_000_BoltClientTests: TheoTestCase {
 
     func testUpdateRelationshipAlt() throws {
         
+        print("vvv---vvv--- I start")
+
         let exp = expectation(description: "Finish transaction with updates to relationship")
         let client = try makeClient()
         try client.executeAsTransaction(mode: .readwrite, bookmark: nil, transactionBlock:  { tx in
@@ -1483,7 +1485,9 @@ class Theo_000_BoltClientTests: TheoTestCase {
                             XCTAssertEqual(to.id!, finalRelationship.toNodeId)
                             
                             tx.markAsFailed()
-                            exp.fulfill()
+                            try? client.rollback(transaction: tx) {
+                                exp.fulfill()
+                            }
                         }
                     }
                 }
@@ -1493,6 +1497,7 @@ class Theo_000_BoltClientTests: TheoTestCase {
         
         waitForExpectations(timeout: 20.0) { error in
             XCTAssertNil(error)
+            print("vvv---vvv--- I am done")
         }
     }
     
@@ -1691,6 +1696,8 @@ class Theo_000_BoltClientTests: TheoTestCase {
 
     func testBreweryDataset() throws {
 
+        let exp = expectation(description: "testBreweryDataset")
+        
         let indexQueries =
 """
 CREATE INDEX ON :BeerBrand(name);
@@ -1731,14 +1738,25 @@ CREATE (bb)-[:HAS_ALCOHOLPERCENTAGE]->(ap),
             XCTAssertTrue(result.isSuccess)
         }
         
+        try client.resetSync()
+        
         try client.executeAsTransaction(mode: .readwrite, bookmark: nil, transactionBlock: { tx in
+            tx.autocommit = false
+            
             for query in queries.split(separator: ";") {
                 let result = client.executeCypherSync(String(query), params: [:])
                 XCTAssertTrue(result.isSuccess)
             }
             
             tx.markAsFailed()
+            try client.rollback(transaction: tx, rollbackCompleteBlock: {
+                exp.fulfill()
+            })
         }, transactionCompleteBlock: nil)
+        
+        waitForExpectations(timeout: 10.0) { error in
+            XCTAssertNil(error)
+        }
     }
     
     /*func testDisconnect() throws {

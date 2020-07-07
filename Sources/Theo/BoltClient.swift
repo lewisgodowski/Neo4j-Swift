@@ -143,7 +143,7 @@ open class BoltClient: ClientProtocol {
             }
             
             promise.whenFailure { error in
-                print("execute -> failutre")
+                print("execute -> failure")
                 completionBlock?(.failure((error)))
             }
             
@@ -481,11 +481,10 @@ open class BoltClient: ClientProtocol {
                     // self.pullSynchronouslyAndIgnore()
                 }
 
-                /*
                 promise.whenFailure { error in
                     let error = BoltClientError.queryUnsuccessful
-                    throw error
-                }*/
+                    // throw error
+                }
                 
             } else {
 
@@ -538,6 +537,59 @@ open class BoltClient: ClientProtocol {
             transaction.commitBlock = { _ in }
             // throw error
         }
+    }
+    
+    public func reset(completionBlock: (() -> ())?) throws {
+        let req = BoltRequest.reset()
+        guard let promise = try self.connection.request(req) else {
+            let error = BoltClientError.unknownError
+            throw error
+        }
+        
+        promise.whenSuccess { responses in
+            if(responses.first?.category != .success) {
+                print("No success rolling back, calling completionblock anyway")
+            }
+            completionBlock?()
+        }
+        
+        promise.whenFailure { error in
+            print("Error resetting connection: \(error)")
+            completionBlock?()
+        }
+
+    }
+    
+    public func resetSync() throws {
+        let group = DispatchGroup()
+        group.enter()
+        try self.reset {
+            group.leave()
+        }
+        group.wait()
+    }
+    
+    public func rollback(transaction: Transaction, rollbackCompleteBlock: (() -> ())?) throws {
+        let rollbackRequest = BoltRequest.rollback()
+        guard let promise = try self.connection.request(rollbackRequest) else {
+            let error = BoltClientError.unknownError
+            throw error
+            // return
+        }
+        
+        promise.whenSuccess { responses in
+            self.currentTransaction = nil
+            if(responses.first?.category != .success) {
+                print("No success rolling back, calling completionblock anyway")
+            }
+            rollbackCompleteBlock?()
+        }
+        
+        promise.whenFailure { error in
+            print("Error rolling back transaction: \(error)")
+            rollbackCompleteBlock?()
+        }
+
     }
 
     public func pullSynchronouslyAndIgnore() {
