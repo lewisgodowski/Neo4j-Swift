@@ -190,7 +190,7 @@ class Theo_001_LotsOfDataScenario: TheoTestCase {
             nodes.append(node)
         }
         let result = client.createNodesSync(nodes: nodes)
-        client.pullSynchronouslyAndIgnore()
+        // client.pullSynchronouslyAndIgnore()
         XCTAssertTrue(result.isSuccess)
     }
     

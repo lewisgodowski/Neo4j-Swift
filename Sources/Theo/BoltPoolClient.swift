@@ -170,6 +170,23 @@ extension BoltPoolClient {
         defer { release(client) }
         try client.executeAsTransaction(mode: mode, bookmark: bookmark, transactionBlock: transactionBlock, transactionCompleteBlock: transactionCompleteBlock)
     }
+
+    public func reset(completionBlock: (() -> ())?) throws {
+        let client = self.getClient() // TODO: How can we ensure we get the old client
+        defer { release(client) }
+        try client.reset(completionBlock: completionBlock)
+    }
+    public func resetSync() throws {
+        let client = self.getClient() // TODO: How can we ensure we get the old client
+        defer { release(client) }
+        try client.resetSync()
+    }
+    
+    public func rollback(transaction: Transaction, rollbackCompleteBlock: (() -> ())?) throws {
+        let client = self.getClient() // TODO: How can we ensure we get the same client that is currently processing that transaction?
+        defer { release(client) }
+        try client.rollback(transaction: transaction, rollbackCompleteBlock: rollbackCompleteBlock)
+    }
     
     public func pullAll(partialQueryResult: QueryResult, completionBlock: ((Result<(Bool, QueryResult), Error>) -> ())?) {
         let client = self.getClient()

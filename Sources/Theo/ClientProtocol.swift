@@ -14,6 +14,9 @@ public protocol ClientProtocol: class {
     func executeCypherSync(_ query: String, params: Dictionary<String,PackProtocol>?) -> (Result<QueryResult, Error>)
     
     func executeAsTransaction(mode: Request.TransactionMode, bookmark: String?, transactionBlock: @escaping (_ tx: Transaction) throws -> (), transactionCompleteBlock: ((Bool) -> ())?) throws
+    func reset(completionBlock: (() -> ())?) throws
+    func resetSync() throws
+    func rollback(transaction: Transaction, rollbackCompleteBlock: (() -> ())?) throws
     func pullAll(partialQueryResult: QueryResult, completionBlock: ((Result<(Bool, QueryResult), Error>) -> ())?)
     func getBookmark() -> String?
     func createAndReturnNode(node: Node, completionBlock: ((Result<Node, Error>) -> ())?)
