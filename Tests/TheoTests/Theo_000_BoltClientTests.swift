@@ -1443,8 +1443,6 @@ class Theo_000_BoltClientTests: TheoTestCase {
 
     func testUpdateRelationshipAlt() throws {
         
-        print("vvv---vvv--- I start")
-
         let exp = expectation(description: "Finish transaction with updates to relationship")
         let client = try makeClient()
         try client.executeAsTransaction(mode: .readwrite, bookmark: nil, transactionBlock:  { tx in
@@ -1497,7 +1495,6 @@ class Theo_000_BoltClientTests: TheoTestCase {
         
         waitForExpectations(timeout: 20.0) { error in
             XCTAssertNil(error)
-            print("vvv---vvv--- I am done")
         }
     }
     

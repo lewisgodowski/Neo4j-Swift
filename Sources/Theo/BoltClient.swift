@@ -137,13 +137,17 @@ open class BoltClient: ClientProtocol {
             }
 
             promise.whenSuccess { responses in
+                #if THEO_DEBUG
                 print("execute -> success")
+                #endif
                 let queryResponse = self.parseResponses(responses: responses)
                 completionBlock?(.success((true, queryResponse)))
             }
             
             promise.whenFailure { error in
+                #if THEO_DEBUG
                 print("execute -> failure")
+                #endif
                 completionBlock?(.failure((error)))
             }
             
@@ -524,7 +528,9 @@ open class BoltClient: ClientProtocol {
         promise.whenSuccess { responses in
             
             try? transactionBlock(transaction)
+            #if THEO_DEBUG
             print("done transaction block??")
+            #endif
             if transaction.autocommit == true {
                 try? transaction.commitBlock(transaction.succeed)
                 transaction.commitBlock = { _ in }
@@ -606,7 +612,9 @@ open class BoltClient: ClientProtocol {
                 return
             }
 
+            #if THEO_DEBUG
             print("Incoming promise: \(String(describing: promise))")
+            #endif
             
             /*promise.whenSuccess { respone in
                 print("yay.....1")
@@ -619,7 +627,9 @@ open class BoltClient: ClientProtocol {
             }*/
             
             promise.whenComplete { result in
+                #if THEO_DEBUG
                 print("yay.....3")
+                #endif
                 dispatchGroup.leave()
             }
 
@@ -792,11 +802,15 @@ extension BoltClient { // Node functions
         group.enter()
 
         var theResult: Result<Bool, Error> = .failure(BoltClientError.unknownError)
-        createNodes(nodes: nodes) { result in
-            theResult = result
-            group.leave()
+        createNodes(nodes: nodes) { creationResult in
+            self.pullAll(partialQueryResult: QueryResult()) { queryResult in
+                theResult = creationResult
+                group.leave()
+            }
         }
 
+        
+        
         group.wait()
         return theResult
     }
@@ -1194,7 +1208,7 @@ extension BoltClient { // Relationship functions
                         let error = BoltClientError.unknownError
                         completionBlock?(.failure(error))
                     } else if queryResult.relationships.count > 1 {
-                        print("createAndReturnRelationshipSync() unexpectantly returned more than one relationship, returning first")
+                        print("createAndReturnRelationship() unexpectantly returned more than one relationship, returning first")
                         let relationship = queryResult.relationships.values.first!
                         completionBlock?(.success(relationship))
                     } else {

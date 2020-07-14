@@ -123,11 +123,10 @@ class Theo_001_LotsOfDataScenario: TheoTestCase {
         
         measure {
             do {
-                //try client.executeAsTransaction(bookmark: nil) { tx in
-                    try self.buildData(client: client)
-                    try self.findData(client: client)
-                    //tx.markAsFailed()
-                //}
+                try self.buildData(client: client)
+                try? client.resetSync()
+                try self.findData(client: client)
+                try? client.resetSync()
             } catch {
                 XCTFail("Hmm....")
             }
@@ -151,6 +150,7 @@ class Theo_001_LotsOfDataScenario: TheoTestCase {
     
     func buildData(client: ClientProtocol) throws {
         
+        print("...-> buildData")
         var nodes = [Node]()
         
         let cypherCreateResult = client.executeCypherSync("CREATE (n:\(label) {created_at: TIMESTAMP()}) RETURN n", params: [:])
@@ -203,7 +203,7 @@ class Theo_001_LotsOfDataScenario: TheoTestCase {
                 XCTAssertEqual(nodes.count, 102)
                 let deleteResult = client.deleteNodesSync(nodes: nodes)
                 XCTAssertTrue(deleteResult.isSuccess)
-                // client.pullSynchronouslyAndIgnore()
+                client.pullSynchronouslyAndIgnore()
             }
         }
     }
