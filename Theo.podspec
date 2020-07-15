@@ -28,5 +28,5 @@ DESC
   s.osx.deployment_target = "10.14"
   s.tvos.deployment_target = "12.2"
   
-  s.dependency 'BoltProtocol', '~> 5.2'
+  s.dependency 'BoltProtocol', '~> 5.2.0'
 end
