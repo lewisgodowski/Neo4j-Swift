@@ -30,37 +30,53 @@ open class BoltClient: ClientProtocol {
     }
 
     required public init(_ configuration: ClientConfigurationProtocol) throws {
-
         self.hostname = configuration.hostname
         self.port = configuration.port
         self.username = configuration.username
         self.password = configuration.password
         self.encrypted = configuration.encrypted
 
-        let settings = ConnectionSettings(username: self.username, password: self.password, userAgent: "Theo 5.2.0")
-
         let socket = try EncryptedSocket(hostname: hostname, port: port)
-        socket.certificateValidator = UnsecureCertificateValidator(hostname: self.hostname, port: UInt(self.port))
+        socket.certificateValidator = UnsecureCertificateValidator(
+            hostname: hostname,
+            port: UInt(port)
+        )
         self.connection = Connection(
             socket: socket,
-            settings: settings)
+            settings: ConnectionSettings(
+                username: username,
+                password: password,
+                userAgent: "Theo 5.2.0"
+            )
+        )
     }
 
-    required public init(hostname: String = "localhost", port: Int = 7687, username: String = "neo4j", password: String = "neo4j", encrypted: Bool = true) throws {
-
+    required public init(
+        hostname: String = "localhost",
+        port: Int = 7687,
+        username: String = "neo4j",
+        password: String = "neo4j",
+        encrypted: Bool = true
+    ) throws {
         self.hostname = hostname
         self.port = port
         self.username = username
         self.password = password
         self.encrypted = encrypted
 
-        let settings = ConnectionSettings(username: username, password: password, userAgent: "Theo 5.2.0")
-
         let socket = try EncryptedSocket(hostname: hostname, port: port)
-        socket.certificateValidator = UnsecureCertificateValidator(hostname: self.hostname, port: UInt(self.port))
+        socket.certificateValidator = UnsecureCertificateValidator(
+            hostname: hostname,
+            port: UInt(port)
+        )
         self.connection = Connection(
             socket: socket,
-            settings: settings)
+            settings: ConnectionSettings(
+                username: username,
+                password: password,
+                userAgent: "Theo 5.2.0"
+            )
+        )
     }
 
     /**
