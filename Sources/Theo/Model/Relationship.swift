@@ -91,8 +91,8 @@ public class Relationship: ResponseItem {
 
     }
 
-    public func createRequest(withReturnStatement: Bool = true, relatinoshipAlias: String = "rel") -> Request {
-        let (query, properties) = createRequestQuery(withReturnStatement: withReturnStatement, relationshipAlias: relatinoshipAlias)
+    public func createRequest(withReturnStatement: Bool = true, relationshipAlias: String = "rel") -> Request {
+        let (query, properties) = createRequestQuery(withReturnStatement: withReturnStatement, relationshipAlias: relationshipAlias)
         return Request.run(statement: query, parameters: Map(dictionary: properties))
     }
 
