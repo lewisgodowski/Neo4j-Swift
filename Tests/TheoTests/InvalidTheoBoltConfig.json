@@ -1,0 +1,10 @@
+{
+        "username": true,
+        "password": "neo4j",
+        "hostname": "localhost",
+        "port": "not.an.int",
+        "encrypted": 7687,
+        "hostUsesSelfSignedCertificate": {
+            "not": "bool"
+        }
+}
