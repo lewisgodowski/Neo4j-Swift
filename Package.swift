@@ -12,8 +12,11 @@ let package = Package(
         .library(name: "Theo", targets: ["Theo"])
     ],
     dependencies: [
-        .package(name: "Bolt", url: "https://github.com/lewisgodowski/Bolt-swift.git", branch: "develop/async-await")
-//        .package(name: "Bolt", url: "https://github.com/Neo4j-Swift/Bolt-swift.git", from: "5.2.0")
+        .package(
+            name: "Bolt",
+            url: "https://github.com/lewisgodowski/Bolt-swift.git",
+            branch: "develop/async-await"
+        )
     ],
     targets: [
         .target(
