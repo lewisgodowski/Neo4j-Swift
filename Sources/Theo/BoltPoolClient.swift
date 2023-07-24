@@ -137,6 +137,15 @@ extension BoltPoolClient {
 
     // MARK: - Execute
 
+    public func execute(
+        request: Request,
+        completionBlock: ((Result<(Bool, QueryResult), Error>) -> ())?
+    ) {
+        let client = getClient()
+        defer { release(client) }
+        client.execute(request: request, completionBlock: completionBlock)
+    }
+
     public func execute(request: Request) async throws -> QueryResult {
         let client = getClient()
         defer { release(client) }
