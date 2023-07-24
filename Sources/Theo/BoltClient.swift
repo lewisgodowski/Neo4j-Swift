@@ -137,9 +137,7 @@ open class BoltClient: ClientProtocol {
      */
     @discardableResult
     public func execute(request: Request) async throws -> QueryResult {
-        guard let responses = try await connection.request(request)?.get() else {
-            throw BoltClientError.unknownError
-        }
+        let responses = try await connection.request(request)
         return try await pullAll(partialQueryResult: parseResponses(responses: responses))
     }
 
@@ -348,9 +346,7 @@ open class BoltClient: ClientProtocol {
     // MARK: - Reset
 
     public func reset() async throws {
-        guard try await connection.request(BoltRequest.reset())?.get() != nil else {
-            throw BoltClientError.unknownError
-        }
+        _ = try await connection.request(BoltRequest.reset())
     }
 
 
@@ -371,9 +367,7 @@ open class BoltClient: ClientProtocol {
     public func pullAll(
         partialQueryResult: QueryResult = QueryResult()
     ) async throws -> QueryResult {
-        guard let responses = try? await connection.request(BoltRequest.pullAll())?.get() else {
-            throw BoltClientError.unknownError
-        }
+        let responses = try await connection.request(BoltRequest.pull())
         return parseResponses(responses: responses, result: partialQueryResult)
     }
 

@@ -644,6 +644,12 @@ class Theo_000_BoltClientTests: TheoTestCase {
         let cypherResult = try await client.executeCypher(cypher)
         print(cypherResult)
     }
+
+    struct User: Codable {
+        var id: UUID
+        var isVerified: Bool
+        var username: String
+    }
 /*
     func testCreateAndRunCypherFromNodesNoResult() throws {
 
