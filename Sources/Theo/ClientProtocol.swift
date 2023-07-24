@@ -11,6 +11,11 @@ public protocol ClientProtocol: AnyObject {
 
     // MARK: - Execute
 
+    func execute(
+        request: Request,
+        completionBlock: ((Result<(Bool, QueryResult), Error>) -> ())?
+    )
+
     @discardableResult
     func execute(request: Request) async throws -> QueryResult
 
