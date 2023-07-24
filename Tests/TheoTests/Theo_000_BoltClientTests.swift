@@ -637,10 +637,10 @@ class Theo_000_BoltClientTests: TheoTestCase {
     func testCypherMatching() async throws {
         let client = try await makeAndConnectClient()
         let cypher =
-              """
-              MATCH (p: Place)
-              RETURN p
-              """
+            """
+            MATCH (p: Place)
+            RETURN p
+            """
         let cypherResult = try await client.executeCypher(cypher)
         print(cypherResult)
     }
