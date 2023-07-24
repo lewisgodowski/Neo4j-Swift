@@ -638,8 +638,8 @@ class Theo_000_BoltClientTests: TheoTestCase {
         let client = try await makeAndConnectClient()
         let cypher =
               """
-              MATCH (u: User)
-              RETURN u
+              MATCH (p: Place)
+              RETURN p
               """
         let cypherResult = try await client.executeCypher(cypher)
         print(cypherResult)
