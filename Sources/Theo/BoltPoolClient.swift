@@ -40,13 +40,14 @@ public class BoltPoolClient: ClientProtocol {
     required public init(
         _ configuration: ClientConfigurationProtocol,
         poolSize: ClosedRange<UInt>
-    ) throws {
+    ) async throws {
         self.configuration = configuration
         self.clientSemaphore = DispatchSemaphore(value: Int(poolSize.upperBound))
-        self.clients = try (0..<poolSize.lowerBound).map { _ in
+        self.clients = []
+        for _ in 0..<poolSize.lowerBound {
             let client = try BoltClient(configuration)
-            _ = client.connectSync()
-            return ClientInstanceWithProperties(client: client)
+            try await client.connect()
+            self.clients.append(ClientInstanceWithProperties(client: client))
         }
     }
     
@@ -57,14 +58,14 @@ public class BoltPoolClient: ClientProtocol {
         password: String = "neo4j",
         encrypted: Bool = true,
         poolSize: ClosedRange<UInt>
-    ) throws {
+    ) async throws {
         let configuration = InMemoryClientConfiguration(
             hostname: hostname,
             port: port,
             username: username,
             password: password,
             encrypted: encrypted)
-        try self.init(configuration, poolSize: poolSize)
+        try await self.init(configuration, poolSize: poolSize)
     }
     
     private let clientsMutationSemaphore = DispatchSemaphore(value: 1)
@@ -119,23 +120,14 @@ extension BoltPoolClient {
 }
 
 extension BoltPoolClient {
-    // MARK: - Connect
+    // MARK: - Connect/Disconnect
 
-    public func connect(completionBlock: ((Result<Bool, Error>) -> ())?) {
+    public func connect() async throws {
         let client = getClient()
         defer { release(client) }
-        client.connect(completionBlock: completionBlock)
-    }
-    
-    public func connectSync() -> Result<Bool, Error> {
-        let client = getClient()
-        defer { release(client) }
-        return client.connectSync()
+        try await client.connect()
     }
 
-
-    // MARK: - Disconnect
-    
     public func disconnect() {
         let client = getClient()
         defer { release(client) }
@@ -153,7 +145,7 @@ extension BoltPoolClient {
     
     public func executeCypher(
         _ query: String,
-        params: [String: PackProtocol]
+        params: [String: PackProtocol] = [:]
     ) async throws -> QueryResult {
         let client = getClient()
         defer { release(client) }
@@ -162,18 +154,11 @@ extension BoltPoolClient {
     
     public func executeAsTransaction(
         mode: Request.TransactionMode = .readonly,
-        bookmark: String?,
-        transactionBlock: @escaping (Transaction) throws -> (),
-        transactionCompleteBlock: ((Bool) -> ())? = nil
-    ) throws {
+        operations: @escaping (_ transaction: Transaction) async throws -> ()
+    ) async throws {
         let client = getClient()
         defer { release(client) }
-        try client.executeAsTransaction(
-            mode: mode,
-            bookmark: bookmark,
-            transactionBlock: transactionBlock,
-            transactionCompleteBlock: transactionCompleteBlock
-        )
+        try await client.executeAsTransaction(mode: mode, operations: operations)
     }
 
 
@@ -188,22 +173,10 @@ extension BoltPoolClient {
 
     // MARK: - Other
     
-    public func rollback(transaction: Transaction) async throws {
-        let client = getClient() // TODO: How can we ensure we get the same client that is currently processing that transaction?
-        defer { release(client) }
-        return try await client.rollback(transaction: transaction)
-    }
-    
     public func pullAll(partialQueryResult: QueryResult) async throws -> QueryResult {
         let client = getClient()
         defer { release(client) }
         return try await client.pullAll(partialQueryResult: partialQueryResult)
-    }
-
-    public func getBookmark() -> String? {
-        let client = getClient()
-        defer { release(client) }
-        return client.getBookmark()
     }
 
 
@@ -239,8 +212,8 @@ extension BoltPoolClient {
     }
 
     public func get(
-        labels: [String],
-        properties: [String: PackProtocol],
+        labels: [String] = [],
+        properties: [String: PackProtocol] = [:],
         skip: UInt64,
         limit: UInt64
     ) async throws -> [Node] {
@@ -293,7 +266,7 @@ extension BoltPoolClient {
         node: Node,
         to: Node,
         type: String,
-        properties: [String: PackProtocol]
+        properties: [String: PackProtocol] = [:]
     ) async throws -> Relationship {
         let client = getClient()
         defer { release(client) }
@@ -322,7 +295,7 @@ extension BoltPoolClient {
 
     public func get(
         type: String,
-        properties: [String: PackProtocol],
+        properties: [String: PackProtocol] = [:],
         skip: UInt64,
         limit: UInt64
     ) async throws -> [Relationship] {
@@ -346,12 +319,25 @@ extension BoltPoolClient {
         return try await client.update(relationship: relationship)
     }
 
+    @discardableResult
+    public func update(relationships: [Relationship]) async throws -> [Relationship] {
+        let client = getClient()
+        defer { release(client) }
+        return try await client.update(relationships: relationships)
+    }
+
 
     // MARK: - Delete Relationship(s)
-    
+
     public func delete(relationship: Relationship) async throws {
         let client = getClient()
         defer { release(client) }
         try await client.delete(relationship: relationship)
+    }
+
+    public func delete(relationships: [Relationship]) async throws {
+        let client = getClient()
+        defer { release(client) }
+        try await client.delete(relationships: relationships)
     }
 }

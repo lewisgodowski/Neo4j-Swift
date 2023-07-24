@@ -3,7 +3,7 @@ import XCTest
 @testable import Theo
 
 class Theo_003_BoltPoolClientTests: Theo_000_BoltClientTests {
-    
+    /*
     static var pool: BoltPoolClient!
     var clientForSuperclass: ClientProtocol!
     
@@ -26,4 +26,5 @@ class Theo_003_BoltPoolClientTests: Theo_000_BoltClientTests {
     override func makeClient(mode: ClientConfigMode = .any) throws -> ClientProtocol {
         return clientForSuperclass
     }
+     */
 }

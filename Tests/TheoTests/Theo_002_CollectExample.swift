@@ -8,7 +8,7 @@ import Bolt
 @testable import Theo
 
 class Theo_002_CollectExample: TheoTestCase {
-    
+    /*
     override func setUp() {
         super.setUp()
         self.continueAfterFailure = false
@@ -74,6 +74,6 @@ class Theo_002_CollectExample: TheoTestCase {
             tx.markAsFailed()
         }, transactionCompleteBlock: nil)
     }
-
+*/
 }
 

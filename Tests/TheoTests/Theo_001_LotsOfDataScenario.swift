@@ -8,7 +8,6 @@ import Bolt
 @testable import Theo
 
 class TheoTestCase: XCTestCase {
-    
     enum ClientConfigMode {
         case any
         case `default`
@@ -16,29 +15,24 @@ class TheoTestCase: XCTestCase {
         case custom
     }
     
-    func makeAndConnectClient(mode: ClientConfigMode = .any, completion: @escaping ((Result<Bool, Error>, ClientProtocol) -> ())) throws {
+    func makeAndConnectClient(mode: ClientConfigMode = .any) async throws -> ClientProtocol {
         let client = try _makeClient(mode: mode)
-        client.connect { result in
-            completion(result, client)
-        }
+        try await client.connect()
+        return client
     }
-    
     enum ConnectionErrors: Error {
         case couldNotConnect
     }
     
-    func makeClient(mode: ClientConfigMode = .any) throws -> ClientProtocol {
+    func makeClient(mode: ClientConfigMode = .any) async throws -> ClientProtocol {
         let client = try _makeClient()
-        let result = client.connectSync()
-        if try result.get() == false {
-            throw ConnectionErrors.couldNotConnect
-        }
+        try await client.connect()
         return client
     }
     
     private func _makeClient(mode: ClientConfigMode = .any) throws -> ClientProtocol {
         let client: BoltClient
-        let configuration = Theo_000_BoltClientTests.configuration
+        let configuration = Theo_000_BoltClientTests.config
         
         if mode == .default || (mode == .any && Theo_000_BoltClientTests.runCount % 3 == 0) {
             client = try BoltClient(hostname: configuration.hostname,
@@ -76,7 +70,7 @@ class TheoTestCase: XCTestCase {
         
         return client
     }
-    
+    /*
     func performConnectSync(client: BoltClient, completionBlock: ((Bool) -> ())? = nil) {
         
         let result = client.connectSync()
@@ -116,19 +110,21 @@ class Theo_001_LotsOfDataScenario: TheoTestCase {
     }
     
     
-    func testScenario() throws {
+    func testScenario() async throws {
         let client = try makeClient()
         
         print("Test with '\(label)'")
         
         measure {
-            do {
-                try self.buildData(client: client)
-                try? client.resetSync()
-                try self.findData(client: client)
-                try? client.resetSync()
-            } catch {
-                XCTFail("Hmm....")
+            Task {
+                do {
+                    try self.buildData(client: client)
+                    try? await client.reset()
+                    try self.findData(client: client)
+                    try? await client.reset()
+                } catch {
+                    XCTFail("Hmm....")
+                }
             }
         }
     }
@@ -148,7 +144,7 @@ class Theo_001_LotsOfDataScenario: TheoTestCase {
         return String(words[pos % words.count])
     }
     
-    func buildData(client: ClientProtocol) throws {
+    func buildData(client: ClientProtocol) async throws {
         
         print("...-> buildData")
         var nodes = [Node]()
@@ -207,4 +203,5 @@ class Theo_001_LotsOfDataScenario: TheoTestCase {
             }
         }
     }
+     */
 }

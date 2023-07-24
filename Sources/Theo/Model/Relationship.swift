@@ -397,7 +397,6 @@ extension Array where Element: Relationship {
         return Request.run(statement: query, parameters: Map(dictionary: parameters))
     }
 
-    /*
     public func updateRequest(withReturnStatement: Bool = true) -> Request {
 
         var aliases = [String]()
@@ -429,7 +428,7 @@ extension Array where Element: Relationship {
 
     public func deleteRequest(withReturnStatement: Bool = true) -> Request {
 
-        let ids = self.flatMap { $0.id }.map { "\($0)" }.joined(separator: ", ")
+        let ids = self.compactMap { $0.id }.map { "\($0)" }.joined(separator: ", ")
         let relationshipAlias = "rel"
 
         let query = """
@@ -440,6 +439,4 @@ extension Array where Element: Relationship {
 
         return Request.run(statement: query, parameters: Map(dictionary: [:]))
     }
-     */
-
 }

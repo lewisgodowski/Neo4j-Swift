@@ -1,16 +1,11 @@
-import Foundation
 import Bolt
+import Foundation
 import PackStream
 
 public protocol ClientProtocol: AnyObject {
-    // MARK: - Connect
+    // MARK: - Connect/Disconnect
 
-    func connect(completionBlock: ((Result<Bool, Error>) -> ())?)
-    func connectSync() -> Result<Bool, Error>
-
-
-    // MARK: - Disconnect
-
+    func connect() async throws
     func disconnect()
 
 
@@ -24,10 +19,8 @@ public protocol ClientProtocol: AnyObject {
 
     func executeAsTransaction(
         mode: Request.TransactionMode,
-        bookmark: String?,
-        transactionBlock: @escaping (_ tx: Transaction) throws -> (),
-        transactionCompleteBlock: ((Bool) -> ())?
-    ) throws
+        operations: @escaping (_ transaction: Transaction) async throws -> ()
+    ) async throws
 
 
     // MARK: - Reset
@@ -37,9 +30,7 @@ public protocol ClientProtocol: AnyObject {
 
     // MARK: - Other
 
-    func rollback(transaction: Transaction) async throws
     func pullAll(partialQueryResult: QueryResult) async throws -> QueryResult
-    func getBookmark() -> String?
 
 
     // MARK: - Create Node(s)
@@ -51,7 +42,7 @@ public protocol ClientProtocol: AnyObject {
     func create(nodes: [Node]) async throws -> [Node]
 
 
-    // MARK: - Read Node(s)
+    // MARK: - Get Node(s)
 
     func get(nodeID: UInt64) async throws -> Node?
     func get(customNodeID: NodeID) async throws -> Node?
@@ -97,7 +88,7 @@ public protocol ClientProtocol: AnyObject {
     func create(relationships: [Relationship]) async throws -> [Relationship]
 
 
-    // MARK: - Read Relationship(s)
+    // MARK: - Get Relationship(s)
 
     func get(
         type: String,
@@ -112,8 +103,58 @@ public protocol ClientProtocol: AnyObject {
     @discardableResult
     func update(relationship: Relationship) async throws -> Relationship
 
+    @discardableResult
+    func update(relationships: [Relationship]) async throws -> [Relationship]
+
 
     // MARK: - Delete Relationship(s)
 
     func delete(relationship: Relationship) async throws
+    func delete(relationships: [Relationship]) async throws
+}
+
+
+// MARK: - Default Values
+
+extension ClientProtocol {
+    public func executeCypher(
+        _ query: String,
+        params: [String: PackProtocol] = [:]
+    ) async throws -> QueryResult {
+        try await executeCypher(query, params: params)
+    }
+
+    public func executeAsTransaction(
+        mode: Request.TransactionMode = .readonly,
+        operations: @escaping (_ transaction: Transaction) async throws -> ()
+    ) async throws {
+        try await executeAsTransaction(mode: mode, operations: operations)
+    }
+
+    public func get(
+        labels: [String] = [],
+        properties: [String: PackProtocol] = [:],
+        skip: UInt64 = 0,
+        limit: UInt64 = 25
+    ) async throws -> [Node] {
+        try await get(labels: labels, properties: properties, skip: skip, limit: limit)
+    }
+
+    public func relate(
+        node: Node,
+        to: Node,
+        type: String,
+        properties: [String: PackProtocol] = [:]
+    ) async throws -> Relationship {
+        try await relate(node: node, to: to, type: type, properties: properties)
+    }
+
+    public func get(
+        type: String,
+        properties: [String: PackProtocol] = [:],
+        skip: UInt64 = 0,
+        limit: UInt64 = 25
+    ) async throws -> [Relationship] {
+        try await get(type: type, properties: properties, skip: skip, limit: limit)
+    }
 }
