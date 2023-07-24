@@ -95,7 +95,28 @@ open class BoltClient: ClientProtocol {
 
      Asynchronous, so the function returns straight away. It is not defined what thread the completionblock will run on,
      so if you need it to run on main thread or another thread, make sure to dispatch to this that thread
+
+     - parameter completionBlock: Completion result-block that provides a Bool to indicate success, or an Error to explain what went wrong
      */
+    public func connect(completionBlock: ((Result<Bool, Error>) -> ())? = nil) {
+        do {
+            try connection.connect { (error) in
+                if let error {
+                    completionBlock?(.failure(error))
+                } else {
+                    completionBlock?(.success(true))
+                }
+            }
+        } catch let error as Connection.ConnectionError {
+            completionBlock?(.failure(error))
+        } catch let error {
+#if THEO_DEBUG
+            print("Unknown error while connecting: \(error.localizedDescription)")
+#endif
+            completionBlock?(.failure(error))
+        }
+    }
+
     public func connect() async throws {
         try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) -> Void in
             do {
@@ -139,6 +160,27 @@ open class BoltClient: ClientProtocol {
     public func execute(request: Request) async throws -> QueryResult {
         let responses = try await connection.request(request)
         return try await pullAll(partialQueryResult: parseResponses(responses: responses))
+    }
+
+    public func execute(
+        request: Request,
+        completionBlock: ((Result<(Bool, QueryResult), Error>) -> ())? = nil
+    ) {
+        let promise = connection.request(request)
+
+        promise.whenSuccess { responses in
+#if THEO_DEBUG
+            print("execute -> success")
+#endif
+            completionBlock?(.success((true, self.parseResponses(responses: responses))))
+        }
+
+        promise.whenFailure { error in
+#if THEO_DEBUG
+            print("execute -> failure")
+#endif
+            completionBlock?(.failure((error)))
+        }
     }
 
     /**

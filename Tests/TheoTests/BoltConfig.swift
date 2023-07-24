@@ -34,8 +34,11 @@ struct BoltConfig: ClientConfigurationProtocol {
             self.encrypted = true
 
             print("Using default parameters as configuration parsing failed: \(error)")
-//        }
+        }
 
-        self.certificateValidator = UnsecureCertificateValidator(hostname: self.hostname, port: UInt(self.port))
+        self.certificateValidator = UnsecureCertificateValidator(
+            hostname: self.hostname,
+            port: UInt(self.port)
+        )
     }
 }
