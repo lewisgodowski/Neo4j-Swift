@@ -645,11 +645,6 @@ class Theo_000_BoltClientTests: TheoTestCase {
         print(cypherResult)
     }
 
-    struct User: Codable {
-        var id: UUID
-        var isVerified: Bool
-        var username: String
-    }
 /*
     func testCreateAndRunCypherFromNodesNoResult() throws {
 
