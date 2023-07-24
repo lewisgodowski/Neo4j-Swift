@@ -162,9 +162,9 @@ open class BoltClient: ClientProtocol {
         return try await pullAll(partialQueryResult: parseResponses(responses: responses))
     }
 
-    public func execute(
+    public func executeR(
         request: Request,
-        completionBlock: ((Result<(Bool, QueryResult), Error>) -> ())? = nil
+        completionBlock: ((Result<(Bool, QueryResult), Error>) -> ())?
     ) {
         let promise = connection.request(request)
 

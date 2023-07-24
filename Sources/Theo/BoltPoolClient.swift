@@ -137,13 +137,13 @@ extension BoltPoolClient {
 
     // MARK: - Execute
 
-    public func execute(
+    public func executeR(
         request: Request,
         completionBlock: ((Result<(Bool, QueryResult), Error>) -> ())?
     ) {
         let client = getClient()
         defer { release(client) }
-        client.execute(request: request, completionBlock: completionBlock)
+        client.executeR(request: request, completionBlock: completionBlock)
     }
 
     public func execute(request: Request) async throws -> QueryResult {

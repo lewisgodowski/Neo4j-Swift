@@ -11,7 +11,7 @@ public protocol ClientProtocol: AnyObject {
 
     // MARK: - Execute
 
-    func execute(
+    func executeR(
         request: Request,
         completionBlock: ((Result<(Bool, QueryResult), Error>) -> ())?
     )
