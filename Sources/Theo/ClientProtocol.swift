@@ -11,7 +11,7 @@ public protocol ClientProtocol: AnyObject {
 
     // MARK: - Execute
 
-    func executeR(
+    func execute(
         request: Request,
         completionBlock: ((Result<(Bool, QueryResult), Error>) -> ())?
     )
@@ -35,7 +35,9 @@ public protocol ClientProtocol: AnyObject {
 
     // MARK: - Other
 
+    func pullAll(partialQueryResult: QueryResult, completionBlock: ((Result<(Bool, QueryResult), Error>) -> ())?)
     func pullAll(partialQueryResult: QueryResult) async throws -> QueryResult
+    
 
 
     // MARK: - Create Node(s)

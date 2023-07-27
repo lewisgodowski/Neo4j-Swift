@@ -162,7 +162,7 @@ open class BoltClient: ClientProtocol {
         return try await pullAll(partialQueryResult: parseResponses(responses: responses))
     }
 
-    public func executeR(
+    public func execute(
         request: Request,
         completionBlock: ((Result<(Bool, QueryResult), Error>) -> ())?
     ) {
@@ -405,6 +405,21 @@ open class BoltClient: ClientProtocol {
      - parameter partialQueryResult: If, for instance when executing the Cypher query, a partial QueryResult was given, pass it in here to have it fully populated in the completion result block
      - parameter completionBlock: Completion result-block that provides either a fully update QueryResult if a QueryResult was given, or a partial QueryResult if no prior QueryResult as given. If a failure has occurred, the Result contains an Error to explain what went wrong
      */
+    public func pullAll(
+        partialQueryResult: QueryResult = QueryResult(),
+        completionBlock: ((Result<(Bool, QueryResult), Error>) -> ())? = nil
+    ) {
+        let promise = connection.request(BoltRequest.pull())
+
+        promise.whenSuccess { responses in
+            completionBlock?(.success((true, self.parseResponses(responses: responses, result: partialQueryResult))))
+        }
+
+        promise.whenFailure { error in
+            completionBlock?(.failure(error))
+        }
+    }
+
     @discardableResult
     public func pullAll(
         partialQueryResult: QueryResult = QueryResult()
