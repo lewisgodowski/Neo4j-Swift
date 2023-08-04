@@ -636,18 +636,9 @@ class Theo_000_BoltClientTests: TheoTestCase {
 */
     func testCypherMatching() async throws {
         let client = try await makeAndConnectClient()
-        let cypher = "MATCH (n) RETURN n"
+        let cypher = "MATCH (p: Place { title: 'Mori Sushi' }) RETURN p"
         let cypherResult = try await client.executeCypher(cypher)
         print(cypherResult)
-    }
-
-    struct Recommendation: Codable {
-        var id: UUID
-
-        var description: String?
-        var placeID: UUID
-        var tags: [String]
-        var title: String
     }
 /*
     func testCreateAndRunCypherFromNodesNoResult() throws {
