@@ -14,7 +14,7 @@ public final class Point: Codable, Sendable {
 
   // MARK: - Constants & Variables
 
-  private static let srid = 88
+  private static let srid = 4326
 
   public let latitude: CLLocationDegrees
   public let longitude: CLLocationDegrees
@@ -28,8 +28,8 @@ public final class Point: Codable, Sendable {
 
   init?(data: PackProtocol) {
     if let s = data as? Structure,
-       s.signature == Point.srid,
-       s.items.count >= 2,
+       s.items.count >= 3,
+       s.items[0] as? Int == Point.srid,
        let latitude = s.items[2] as? CLLocationDegrees,
        let longitude = s.items[1] as? CLLocationDegrees {
       self.latitude = latitude
