@@ -56,3 +56,22 @@ public final class Point: Codable, Sendable {
 //    try container.encode(self.longitude, forKey: .longitude)
   }
 }
+
+
+extension Structure: Codable {
+  enum CodingKeys: String, CodingKey {
+    case items
+    case signature
+  }
+
+  public init(from decoder: Decoder) throws {
+    let values = try decoder.container(keyedBy: CodingKeys.self)
+
+    print("STRUCTURE DECODABLE", values)
+    self.init(signature: 8, items: [])
+  }
+
+  public func encode(to encoder: Encoder) throws {
+    print("STRUCTURE ENCODABLE")
+  }
+}
