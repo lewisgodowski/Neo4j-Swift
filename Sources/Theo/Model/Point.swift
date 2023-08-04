@@ -3,7 +3,7 @@ import CoreLocation
 import Foundation
 import PackStream
 
-public class Point: Codable {
+public final class Point: Codable, Sendable {
   // MARK: - Enums
 
   enum CodingKeys: String, CodingKey {
@@ -16,8 +16,12 @@ public class Point: Codable {
 
   private static let srid = 88
 
-  public private(set) var latitude: CLLocationDegrees
-  public private(set) var longitude: CLLocationDegrees
+  public let latitude: CLLocationDegrees
+  public let longitude: CLLocationDegrees
+
+  var coordinate: CLLocationCoordinate2D {
+    .init(latitude: latitude, longitude: longitude)
+  }
 
 
   // MARK: - init
