@@ -1,9 +1,9 @@
 import Foundation
 
-public class DictionaryDecoder {
-    init() { }
+public final class DictionaryDecoder {
+    public init() { }
 
-    func decode<T: Decodable>(_ type: T.Type, from data: [String: Any]) throws -> T {
+    public func decode<T: Decodable>(_ type: T.Type, from data: [String: Any]) throws -> T {
         let decoder = _Decoder(codingPath: [], source: data)
         return try T(from: decoder)
     }
