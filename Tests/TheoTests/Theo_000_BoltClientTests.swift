@@ -636,11 +636,7 @@ class Theo_000_BoltClientTests: TheoTestCase {
 */
     func testCypherMatching() async throws {
         let client = try await makeAndConnectClient()
-        let cypher =
-              """
-              MATCH (t:Tag)<-[:HAS_TAG]-(r:Recommendation { id: toLower('B018F0DD-2587-419A-95E2-B5A443DDB768') })-[:RECOMMENDS]-(p:Place)
-              RETURN r AS recommendation, p.id AS placeID, collect(t.text) AS tags
-              """
+        let cypher = "MATCH (n) RETURN n"
         let cypherResult = try await client.executeCypher(cypher)
         print(cypherResult)
     }

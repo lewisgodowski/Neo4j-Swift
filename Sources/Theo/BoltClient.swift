@@ -333,6 +333,10 @@ open class BoltClient: ClientProtocol {
                 }
             }
 
+            else if let point = Point(data: candidate) {
+                print("POINT", point)
+            }
+
             else if let record = candidate.uintValue() {
                 if let field = field {
                     row[field] = record

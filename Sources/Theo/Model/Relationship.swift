@@ -9,8 +9,8 @@ public enum RelationshipDirection {
 
 public class Relationship: ResponseItem {
     public var id: UInt64? = nil
-    public private(set) var isModified: Bool = false
-    public var updatedTime: Date = Date()
+    public private(set) var isModified = false
+    public var updatedTime = Date()
     public var createdTime: Date? = nil
 
     public private(set) var properties: [String: PackProtocol]
@@ -21,7 +21,7 @@ public class Relationship: ResponseItem {
         }
     }
 
-    private var updatedProperties: [String: PackProtocol] = [:]
+    private var updatedProperties = [String: PackProtocol]()
     private var removedPropertyKeys = Set<String>()
     private var typeIsModified = false
 
@@ -31,8 +31,13 @@ public class Relationship: ResponseItem {
     public var toNode: Node?
     public var direction: RelationshipDirection
 
-    public init(fromNode: Node, toNode: Node, type: String, direction: RelationshipDirection = .from, properties: [String: PackProtocol] = [:]) {
-
+    public init(
+        fromNode: Node,
+        toNode: Node,
+        type: String,
+        direction: RelationshipDirection = .from,
+        properties: [String: PackProtocol] = [:]
+    ) {
         self.fromNode = fromNode
         self.fromNodeId = fromNode.id
         self.toNode = toNode
@@ -47,8 +52,13 @@ public class Relationship: ResponseItem {
         self.updatedTime = Date()
     }
 
-    public init(fromNodeId: UInt64, toNodeId:UInt64, type: String, direction: RelationshipDirection, properties: [String: PackProtocol] = [:]) {
-
+    public init(
+        fromNodeId: UInt64,
+        toNodeId:UInt64,
+        type: String,
+        direction: RelationshipDirection,
+        properties: [String: PackProtocol] = [:]
+    ) {
         self.fromNode = nil
         self.fromNodeId = fromNodeId
         self.toNode = nil
@@ -65,13 +75,13 @@ public class Relationship: ResponseItem {
 
     init?(data: PackProtocol) {
         if let s = data as? Structure,
-            s.signature == 82,
-            s.items.count >= 5,
-            let relationshipId = s.items[0].uintValue(),
-            let fromNodeId = s.items[1].uintValue(),
-            let toNodeId = s.items[2].uintValue(),
-            let type = s.items[3] as? String,
-            let properties = (s.items[4] as? Map)?.dictionary {
+           s.signature == 82,
+           s.items.count >= 5,
+           let relationshipId = s.items[0].uintValue(),
+           let fromNodeId = s.items[1].uintValue(),
+           let toNodeId = s.items[2].uintValue(),
+           let type = s.items[3] as? String,
+           let properties = (s.items[4] as? Map)?.dictionary {
 
             self.id = relationshipId
             self.fromNodeId = fromNodeId
@@ -99,62 +109,62 @@ public class Relationship: ResponseItem {
     public func createRequestQuery(
         withReturnStatement: Bool = true,
         relationshipAlias: String = "rel") -> (String, [String: PackProtocol]) {
-        let relationshipAlias = relationshipAlias == "" ? relationshipAlias : "`\(relationshipAlias)`"
+            let relationshipAlias = relationshipAlias == "" ? relationshipAlias : "`\(relationshipAlias)`"
 
-        var properties = self.properties
+            var properties = self.properties
 
-        var params = properties.keys.map { "`\($0)`: $\($0)" }.joined(separator: ", ")
-        if params != "" {
-            params = " { \(params) }"
-        }
-
-        let uniquingKeysWith: (PackProtocol, PackProtocol) -> PackProtocol = { (_, new) in
-            return new
-        }
-
-        let fromNodeQuery: String
-        if let fromNode = self.fromNode, fromNode.id == nil {
-            let (q, fromProps) = fromNode.createRequestQuery(withReturnStatement: false, nodeAlias: "fromNode", paramSuffix: "1", withCreate: true)
-            fromNodeQuery = q
-            properties.merge(fromProps, uniquingKeysWith: uniquingKeysWith)
-        } else {
-            guard let fromNodeId = self.fromNodeId else {
-                print("fromNodeId was missing in createRequestQuery. Please file a bug")
-                return ("", [:])
+            var params = properties.keys.map { "`\($0)`: $\($0)" }.joined(separator: ", ")
+            if params != "" {
+                params = " { \(params) }"
             }
-            fromNodeQuery = "MATCH (fromNode) WHERE id(fromNode) = \(fromNodeId)"
-        }
 
-        let toNodeQuery: String
-        if let toNode = self.toNode, toNode.id == nil {
-            let (q, toProps) = toNode.createRequestQuery(withReturnStatement: false, nodeAlias: "toNode", paramSuffix: "2", withCreate: true)
-            toNodeQuery = q
-            properties.merge(toProps, uniquingKeysWith: uniquingKeysWith)
-        } else {
-            guard let toNodeId = self.toNodeId else {
-                print("toNodeId was missing in createRequestQuery. Please file a bug")
-                return ("", [:])
+            let uniquingKeysWith: (PackProtocol, PackProtocol) -> PackProtocol = { (_, new) in
+                return new
             }
-            toNodeQuery = "MATCH (toNode) WHERE id(toNode) = \(toNodeId)"
-        }
 
-        let relQuery: String
-        switch direction {
-        case .from:
-            relQuery = "CREATE (fromNode)-[\(relationshipAlias):`\(type)`\(params)]->(toNode)"
-        case .to:
-            relQuery = "CREATE (fromNode)<-[\(relationshipAlias):`\(type)`\(params)]-(toNode)"
-        }
+            let fromNodeQuery: String
+            if let fromNode = self.fromNode, fromNode.id == nil {
+                let (q, fromProps) = fromNode.createRequestQuery(withReturnStatement: false, nodeAlias: "fromNode", paramSuffix: "1", withCreate: true)
+                fromNodeQuery = q
+                properties.merge(fromProps, uniquingKeysWith: uniquingKeysWith)
+            } else {
+                guard let fromNodeId = self.fromNodeId else {
+                    print("fromNodeId was missing in createRequestQuery. Please file a bug")
+                    return ("", [:])
+                }
+                fromNodeQuery = "MATCH (fromNode) WHERE id(fromNode) = \(fromNodeId)"
+            }
 
-        let query: String
-        if withReturnStatement {
-             query = [fromNodeQuery, toNodeQuery, relQuery, "RETURN \(relationshipAlias),`fromNode`,`toNode`"].cypherSorted().joined(separator: "\n")
-        } else {
-            query = [fromNodeQuery, toNodeQuery, relQuery].cypherSorted().joined(separator: "\n")
-        }
+            let toNodeQuery: String
+            if let toNode = self.toNode, toNode.id == nil {
+                let (q, toProps) = toNode.createRequestQuery(withReturnStatement: false, nodeAlias: "toNode", paramSuffix: "2", withCreate: true)
+                toNodeQuery = q
+                properties.merge(toProps, uniquingKeysWith: uniquingKeysWith)
+            } else {
+                guard let toNodeId = self.toNodeId else {
+                    print("toNodeId was missing in createRequestQuery. Please file a bug")
+                    return ("", [:])
+                }
+                toNodeQuery = "MATCH (toNode) WHERE id(toNode) = \(toNodeId)"
+            }
 
-        return (query, properties)
-    }
+            let relQuery: String
+            switch direction {
+                case .from:
+                    relQuery = "CREATE (fromNode)-[\(relationshipAlias):`\(type)`\(params)]->(toNode)"
+                case .to:
+                    relQuery = "CREATE (fromNode)<-[\(relationshipAlias):`\(type)`\(params)]-(toNode)"
+            }
+
+            let query: String
+            if withReturnStatement {
+                query = [fromNodeQuery, toNodeQuery, relQuery, "RETURN \(relationshipAlias),`fromNode`,`toNode`"].cypherSorted().joined(separator: "\n")
+            } else {
+                query = [fromNodeQuery, toNodeQuery, relQuery].cypherSorted().joined(separator: "\n")
+            }
+
+            return (query, properties)
+        }
 
     public func updateRequest(withReturnStatement: Bool = true, relationshipAlias: String = "rel") -> Request {
         let (query, properties) = updateRequestQuery(withReturnStatement: withReturnStatement, relationshipAlias: relationshipAlias)
