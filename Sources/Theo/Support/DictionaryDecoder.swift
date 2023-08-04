@@ -1,6 +1,6 @@
 import Foundation
 
-class DictionaryDecoder {
+public class DictionaryDecoder {
     init() { }
 
     func decode<T: Decodable>(_ type: T.Type, from data: [String: Any]) throws -> T {
