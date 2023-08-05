@@ -18,7 +18,7 @@ public final class Point: ResponseItem, Sendable {
 
     // MARK: - init
 
-    init?(data: PackProtocol) {
+    public init?(data: PackProtocol) {
         if let s = data as? Structure,
            s.items.count >= 3,
            s.items[0] as? Int == Point.srid,
@@ -32,7 +32,7 @@ public final class Point: ResponseItem, Sendable {
         }
     }
 
-    init?(structure: Structure) {
+    public init?(structure: Structure) {
         if structure.items.count >= 3,
            structure.items[0] as? Int == Point.srid,
            let latitude = structure.items[2] as? CLLocationDegrees,
