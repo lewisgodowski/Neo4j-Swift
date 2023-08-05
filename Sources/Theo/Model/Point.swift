@@ -21,7 +21,7 @@ public final class Point: Codable, ResponseItem, Sendable {
     public init?(data: PackProtocol) {
         if let s = data as? Structure,
            s.items.count >= 3,
-           s.items[0] as? Int == Point.srid,
+           s.items[0].int == Point.srid,
            let latitude = s.items[2] as? CLLocationDegrees,
            let longitude = s.items[1] as? CLLocationDegrees
         {
