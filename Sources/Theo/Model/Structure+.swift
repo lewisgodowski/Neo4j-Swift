@@ -1,6 +1,6 @@
 import PackStream
 
-extension Structure {
+public extension Structure {
     var subType: ResponseItem.Type? {
         if signature == 78, items.count >= 3 { return Node.self }
         if signature == 80, items.count >= 3 { return Path.self }
