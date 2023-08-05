@@ -222,10 +222,10 @@ public class Node: ResponseItem {
 
         let nodeAlias = nodeAlias == "" ? nodeAlias : "`\(nodeAlias)`"
         return """
-      MATCH (\(nodeAlias))
-      WHERE id(\(nodeAlias)) = \(id)
-      DETACH DELETE \(nodeAlias)
-    """
+            MATCH (\(nodeAlias))
+            WHERE id(\(nodeAlias)) = \(id)
+            DETACH DELETE \(nodeAlias)
+        """
     }
 
 

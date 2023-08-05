@@ -499,6 +499,13 @@ open class BoltClient: ClientProtocol {
 
     // MARK: - Delete Node(s)
 
+    public func delete(nodeID: UInt64) async throws {
+        try await executeCypher(
+            "MATCH (n) WHERE id(n) = $id DETACH DELETE n",
+            params: ["id": Int64(nodeID)]
+        )
+    }
+
     public func delete(node: Node) async throws {
         try await execute(request: node.deleteRequest())
     }
