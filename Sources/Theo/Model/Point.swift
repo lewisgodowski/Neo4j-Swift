@@ -3,7 +3,7 @@ import CoreLocation
 import Foundation
 import PackStream
 
-public final class Point: ResponseItem, Sendable {
+public final class Point: Codable, ResponseItem, Sendable {
     // MARK: - Constants & Variables
 
     private static let srid = 4326
