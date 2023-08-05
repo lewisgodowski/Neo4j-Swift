@@ -34,7 +34,7 @@ public final class Point: Codable, ResponseItem, Sendable {
 
     public init?(structure: Structure) {
         if structure.items.count >= 3,
-           structure.items[0] as? Int == Point.srid,
+           structure.items[0].int == Point.srid,
            let latitude = structure.items[2] as? CLLocationDegrees,
            let longitude = structure.items[1] as? CLLocationDegrees
         {
